@@ -1,36 +1,141 @@
-# This is a basic workflow to help you get started with Actions
+name: Yocto DevSecOps CI
 
-name: CI
-
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
-    branches: [ "main" ]
+    branches: [ main ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ main ]
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
-
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+  setup:
     runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
+    outputs:
+      cache-key: ${{ steps.cache.outputs.cache-key }}
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
-
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
-
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+        with: fetch-depth: 0
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Cache Yocto sstate (optional)
+        uses: actions/cache@v4
+        id: cache
+        with:
+          path: |
+            .cache/sstate
+            downloads
+          key: yocto-sstate-${{ github.sha }}
+          restore-keys: |
+            yocto-sstate-
+      - name: Prepare environment
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          sudo apt-get update && sudo apt-get install -y python3-pip jq
+          pip install detect-secrets semgrep syft grype
+
+  lint-and-sast:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: fetch-depth: 0
+      - name: Run Yocto/BSP lint and recipe checks
+        run: |
+          # dry-run parsing of bitbake metadata
+          source oe-init-build-env >/dev/null 2>&1 || echo "No oe env; running quick checks"
+          # Run bitbake dry-run for a small image (or just parse)
+          if command -v bitbake >/dev/null; then
+            bitbake -n core-image-minimal || true
+          else
+            echo "bitbake not available in runner; skipping"
+          fi
+      - name: Run Semgrep (SAST)
+        run: |
+          semgrep --config auto --output semgrep_results.json || true
+      - name: Upload Semgrep report
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-results
+          path: semgrep_results.json
+
+  secret-scan:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: fetch-depth: 0
+      - name: Run detect-secrets baseline & scan
+        run: |
+          detect-secrets scan > .secrets.baseline || true
+          detect-secrets audit .secrets.baseline || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: secrets-baseline
+          path: .secrets.baseline
+
+  sbom-and-sca:
+    needs: [setup]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate SBOM from repository (syft)
+        run: |
+          # Try to generate from a tiny rootfs if present; else from repo
+          if [ -f rootfs.tar.gz ]; then
+            syft packages:rootfs.tar.gz -o cyclonedx-json=sbom.cyclonedx.json || true
+          else
+            syft dir:. -o cyclonedx-json=sbom.cyclonedx.json || true
+          fi
+      - name: Scan SBOM with Grype
+        run: |
+          grype sbom:sbom.cyclonedx.json -o json > grype_report.json || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom-and-grype
+          path: |
+            sbom.cyclonedx.json
+            grype_report.json
+
+  container-scan:
+    needs: [setup]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build demo container (if Dockerfile present)
+        run: |
+          if [ -f Dockerfile ]; then
+            docker build -t demo-component:ci . || true
+          else
+            echo "No Dockerfile; skipping"
+          fi
+      - name: Scan image with Trivy
+        run: |
+          if docker images -q demo-component:ci >/dev/null 2>&1; then
+            trivy image --format json -o trivy.json demo-component:ci || true
+            cp trivy.json trivy-ci-report.json || true
+          else
+            echo "No image built"
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: trivy-ci-report.json
+
+  sign-artifacts:
+    needs: [sbom-and-sca, container-scan]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cosign
+        run: |
+          curl -LO https://github.com/sigstore/cosign/releases/download/v1.11.0/cosign-linux-amd64 && chmod +x cosign-linux-amd64 && sudo mv cosign-linux-amd64 /usr/local/bin/cosign
+      - name: Create ephemeral key & sign sbom
+        env:
+          COSIGN_PASSWORD: ''
+        run: |
+          cosign generate-key-pair || true
+          cosign sign-blob --key cosign.key sbom.cyclonedx.json || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: signed-sbom
+          path: |
+            sbom.cyclonedx.json
+            sbom.cyclonedx.json.sig
