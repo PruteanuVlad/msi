@@ -35,6 +35,7 @@ jobs:
 
       - name: Build minimal image
         run: |
+          echo 0 | sudo tee /proc/sys/kernel/apparmor_restrict_unprivileged_userns
           sudo apt update
           sudo apt-get install build-essential chrpath cpio debianutils locales
           sudo apt-get install diffstat file gawk gcc git iputils-ping libacl1
