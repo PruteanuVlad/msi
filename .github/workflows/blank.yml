@@ -12,10 +12,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Python + OELint
+      - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3 python3-pip
+          sudo apt-get install -y python3 python3-pip cppcheck
           pip3 install oelint-adv
 
 #      - name: Run OELint on one recipe
@@ -51,6 +51,28 @@ jobs:
         with:
           name: kernel-hardening-report
           path: reports/kernel_hardening.json
+
+
+      - name: Run cppcheck and generate HTML report
+        run: |
+            mkdir -p reports/cppcheck
+            cppcheck --xml --enable=all --inconclusive \
+            $(find meta-mylayer -name "*.c") \
+            2> reports/cppcheck/report.xml
+            cppcheck-htmlreport \
+            --file reports/cppcheck/report.xml \
+            --report-dir reports/cppcheck/html \
+            --source-dir .
+
+      # This packages the site content
+      - name: Prepare GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: reports/cppcheck/html
+
+      # This publishes it to GitHub Pages
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
 
 #      - name: Build minimal image
 #        run: |
