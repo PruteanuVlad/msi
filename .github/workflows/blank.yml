@@ -21,7 +21,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y python3 python3-pip cppcheck
-          pip3 install oelint-adv
+          pip3 install oelint-adv bandit
 
 #      - name: Run OELint on one recipe
 #        run: |
@@ -45,17 +45,17 @@ jobs:
 
       - name: Run kernel hardening checker
         run: |
-          mkdir -p reports
+          mkdir -p reports/kernel
           ./kernel-hardening-checker/bin/kernel-hardening-checker \
             -c meta-mylayer/recipes-kernel/linux-yocto/.config \
             -m json \
-            > reports/kernel_hardening.json
+            > reports/kernel/hardening.json
 
       - name: Upload kernel hardening report
         uses: actions/upload-artifact@v4
         with:
           name: kernel-hardening-report
-          path: reports/kernel_hardening.json
+          path: reports/kernel/hardening.json
 
 
       - name: Run cppcheck and generate HTML report
@@ -69,11 +69,53 @@ jobs:
             --report-dir reports/cppcheck/html \
             --source-dir .
 
+      - name: Run Bandit and generate HTML report
+        run: |
+            mkdir -p reports/bandit
+            bandit -r $(find meta-mylayer -name "*.py") -f html -o reports/bandit/index.html
+
+      - name: Create index.html
+        run: |
+            mkdir -p reports/site
+            cat << 'EOF' > reports/site/index.html
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>DevSecOps Report Dashboard</title>
+                <style>
+                  body { font-family: Arial; padding:40px; }
+                  h1 { margin-bottom: 30px; }
+                  a { display:block; font-size:20px; margin:10px 0; }
+                </style>
+            </head>
+            <body>
+              <h1>Security Analysis Dashboard</h1>
+            
+              <a href="bandit/index.html">Bandit Python Security Report</a>
+              <a href="cppcheck/html/index.html">Cppcheck Static Analysis</a>
+              <a href="kernel/hardening.json">Kernel Hardening JSON</a>
+            
+              <p>Reports generated automatically via GitHub Actions.</p>
+            </body>
+            </html>
+            EOF
+
+      - name: Assemble site directory
+        run: |
+          mkdir -p reports/site/bandit
+          mkdir -p reports/site/cppcheck
+          mkdir -p reports/site/kernel
+          
+          cp -r reports/bandit/* reports/site/bandit/
+          cp -r reports/cppcheck/html reports/site/cppcheck/
+          cp -r reports/kernel/* reports/site/kernel/
+
       # This packages the site content
       - name: Prepare GitHub Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: reports/cppcheck/html
+          path: reports/site
 
       # This publishes it to GitHub Pages
       - name: Deploy to GitHub Pages

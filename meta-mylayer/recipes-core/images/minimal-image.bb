@@ -5,7 +5,7 @@ LICENSE = "MIT"
 inherit core-image
 
 # Basic packages for a minimal image
-IMAGE_INSTALL = "packagegroup-core-boot nano"
+IMAGE_INSTALL = "packagegroup-core-boot nano bandit-bait"
 
 # Optional: reduce size further
 EXTRA_IMAGE_FEATURES = " \
