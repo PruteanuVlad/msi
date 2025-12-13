@@ -70,9 +70,21 @@ jobs:
             --source-dir .
 
       - name: Run Bandit and generate HTML report
+        continue-on-error: true
         run: |
             mkdir -p reports/bandit
             bandit -r $(find meta-mylayer -name "*.py") -f html -o reports/bandit/index.html
+
+      - name: Run Gitleaks
+        continue-on-error: true
+        run: |
+            curl -L \
+              https://github.com/gitleaks/gitleaks/releases/download/v8.30.0/gitleaks_8.30.0_linux_x64.tar.gz \
+              -o gitleaks.tar.gz
+          
+            tar -xzf gitleaks.tar.gz
+            mkdir -p reports/gitleaks
+            ./gitleaks detect --report-path=reports/gitleaks/index.html --report-format=template --report-template=./basic.tmpl
 
       - name: Create index.html
         run: |
@@ -95,6 +107,7 @@ jobs:
               <a href="bandit/index.html">Bandit Python Security Report</a>
               <a href="cppcheck/html/index.html">Cppcheck Static Analysis</a>
               <a href="kernel/hardening.json">Kernel Hardening JSON</a>
+              <a href="gitleaks/index.html">Gitleaks Report</a>
             
               <p>Reports generated automatically via GitHub Actions.</p>
             </body>
@@ -106,10 +119,12 @@ jobs:
           mkdir -p reports/site/bandit
           mkdir -p reports/site/cppcheck
           mkdir -p reports/site/kernel
+          mkdir -p reports/site/gitleaks
           
           cp -r reports/bandit/* reports/site/bandit/
           cp -r reports/cppcheck/html reports/site/cppcheck/
           cp -r reports/kernel/* reports/site/kernel/
+          cp -r reports/gitleaks/* reports/site/gitleaks/
 
       # This packages the site content
       - name: Prepare GitHub Pages artifact
