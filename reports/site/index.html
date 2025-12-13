@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Yocto DevSecOps Dashboard</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            background: #f7f7f7;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 { margin-top: 0; }
+        h2 { margin-top: 40px; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        .card a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .status {
+            font-weight: bold;
+        }
+
+        .pipeline {
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>Yocto DevSecOps Dashboard</h1>
+<p>Unified security analysis for Yocto layers and integrated components.</p>
+
+<h2>Pipeline Overview</h2>
+
+<div class="pipeline">
+    <div class="mermaid">
+        graph LR
+        Checkout --> InstallTools --> OELint --> KernelHardening --> Cppcheck --> Bandit --> Gitleaks --> Build --> SBOM
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script>
+    mermaid.initialize({ startOnLoad: true });
+</script>
+
+<h2>Security Tools</h2>
+
+<div class="grid">
+
+    <div class="card">
+        <a href="linter/index.html">
+            <h3>OELint</h3>
+            <p>Yocto Recipe Linting</p>
+        </a>
+    </div>
+
+    <div class="card">
+        <a href="kernel/hardening.json">
+            <h3>Kernel Hardening</h3>
+            <p>Config Security</p>
+        </a>
+    </div>
+
+    <div class="card">
+        <a href="cppcheck/html/index.html">
+            <h3>Cppcheck</h3>
+            <p>C/C++ Static Analysis</p>
+        </a>
+    </div>
+
+    <div class="card">
+        <a href="bandit/index.html">
+            <h3>Bandit</h3>
+            <p>Python SAST</p>
+        </a>
+    </div>
+
+    <div class="card">
+        <a href="gitleaks/index.html">
+            <h3>Gitleaks</h3>
+            <p>Secret Scanning</p>
+        </a>
+    </div>
+
+    <div class="card">
+        <a href="grype/index.html">
+            <h3>SBOM CVE Scan</h3>
+            <p>Supply Chain Vulnerabilities</p>
+        </a>
+    </div>
+
+</div>
+
+</body>
+</html>

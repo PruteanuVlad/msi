@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>OELint Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f7f7f7; }
+        h1 { margin-top: 0; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; background: white; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 8px 12px; border-bottom: 1px solid #ccc; text-align: left; }
+        th { background: #eee; cursor: pointer; }
+        tr.error { background-color: #fdd; }
+        tr.warning { background-color: #ffe4b3; }
+        tr.info { background-color: #e0f0ff; }
+        tr:hover { background-color: #f1f1f1; }
+
+        button.filter-btn {
+            margin-right: 10px;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button.filter-btn.active { font-weight: bold; }
+
+        .chart-container { width: 400px; margin-top: 30px; }
+    </style>
+</head>
+<body>
+
+<h1>OELint Report</h1>
+
+<div>
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="error">Errors</button>
+    <button class="filter-btn" data-filter="warning">Warnings</button>
+    <button class="filter-btn" data-filter="info">Info</button>
+</div>
+
+<div class="chart-container">
+    <canvas id="severityChart"></canvas>
+</div>
+
+<table id="oelintTable">
+    <thead>
+    <tr>
+        <th>File</th>
+        <th>Line</th>
+        <th>Level</th>
+        <th>Rule</th>
+        <th>Message</th>
+    </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<script>
+    fetch("oelint-report.txt")
+        .then(r => r.text())
+        .then(text => {
+            const lines = text.split("\n").filter(Boolean);
+            const tbody = document.querySelector("#oelintTable tbody");
+            const severityCounts = { error: 0, warning: 0, info: 0 };
+            const issueRegex = /^(.*?):(\d+):(\w+):([^:]+):(.*)$/;
+
+            lines.forEach(line => {
+                const m = line.match(issueRegex);
+                if (!m) return;
+                const [_, file, lineNum, level, rule, message] = m;
+                const tr = document.createElement("tr");
+                tr.className = level.toLowerCase();
+                tr.innerHTML = `
+                <td>${file}</td>
+                <td>${lineNum}</td>
+                <td>${level}</td>
+                <td>${rule}</td>
+                <td>${message.trim()}</td>
+            `;
+                tbody.appendChild(tr);
+
+                // Count severity
+                const lvl = level.toLowerCase();
+                if (severityCounts[lvl] !== undefined) severityCounts[lvl]++;
+            });
+
+            // Chart
+            new Chart(document.getElementById("severityChart"), {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(severityCounts),
+                    datasets: [{
+                        label: 'OELint Issues',
+                        data: Object.values(severityCounts),
+                        backgroundColor: ['#c62828','#ef6c00','#2196f3']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, precision:0 } }
+                }
+            });
+
+            // Filtering
+            const buttons = document.querySelectorAll(".filter-btn");
+            buttons.forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const filter = btn.dataset.filter;
+                    buttons.forEach(b => b.classList.remove("active"));
+                    btn.classList.add("active");
+
+                    tbody.querySelectorAll("tr").forEach(tr => {
+                        if (filter === "all") {
+                            tr.style.display = "";
+                        } else {
+                            tr.style.display = tr.classList.contains(filter) ? "" : "none";
+                        }
+                    });
+                });
+            });
+        })
+        .catch(err => console.error("Failed to load OELint report:", err));
+</script>
+
+</body>
+</html>
