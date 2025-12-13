@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Kernel Hardening Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .ok { background-color: #d4edda; }
+        .fail { background-color: #f8d7da; }
+        select { margin-bottom: 10px; padding: 5px; }
+    </style>
+</head>
+<body>
+
+<h2>Kernel Hardening Report</h2>
+
+<label for="reasonFilter">Filter by reason:</label>
+<select id="reasonFilter">
+    <option value="">All</option>
+    <option value="self_protection">Self Protection</option>
+    <option value="security_policy">Security Policy</option>
+    <option value="cut_attack_surface">Cut Attack Surface</option>
+</select>
+
+<label for="statusFilter">Filter by status:</label>
+<select id="statusFilter">
+    <option value="">All</option>
+    <option value="ok">OK</option>
+    <option value="fail">FAIL</option>
+</select>
+
+<table id="reportTable">
+    <thead>
+    <tr>
+        <th>Option</th><th>Type</th><th>Reason</th><th>Decision</th>
+        <th>Desired</th><th>Result</th>
+    </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<script>
+    let data = [];
+
+    // Fetch JSON file dynamically
+    fetch('hardening.json')  // <-- replace with your JSON file path
+        .then(response => response.json())
+        .then(json => {
+            data = json;
+            buildTable(data);
+        })
+        .catch(err => console.error('Error loading JSON:', err));
+
+    // Function to build table rows
+    function buildTable(filteredData) {
+        const tbody = document.querySelector("#reportTable tbody");
+        tbody.innerHTML = "";
+        filteredData.forEach(item => {
+            const tr = document.createElement("tr");
+            tr.className = item.check_result_bool ? "ok" : "fail";
+            tr.innerHTML = `
+            <td>${item.option_name}</td>
+            <td>${item.type}</td>
+            <td>${item.reason}</td>
+            <td>${item.decision}</td>
+            <td>${item.desired_val}</td>
+            <td>${item.check_result}</td>
+        `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // Filtering
+    document.getElementById("reasonFilter").addEventListener("change", applyFilter);
+    document.getElementById("statusFilter").addEventListener("change", applyFilter);
+
+    function applyFilter() {
+        const reason = document.getElementById("reasonFilter").value;
+        const status = document.getElementById("statusFilter").value;
+        const filtered = data.filter(item => {
+            let ok = true;
+            if (reason && item.reason !== reason) ok = false;
+            if (status) {
+                if (status === "ok" && !item.check_result_bool) ok = false;
+                if (status === "fail" && item.check_result_bool) ok = false;
+            }
+            return ok;
+        });
+        buildTable(filtered);
+    }
+</script>
+
+</body>
+</html>
