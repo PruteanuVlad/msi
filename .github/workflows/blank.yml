@@ -23,40 +23,25 @@ jobs:
           sudo apt-get install -y python3 python3-pip cppcheck
           pip3 install oelint-adv bandit
 
-#      - name: Run OELint on one recipe
-#        run: |
-#          mkdir -p reports
-#          oelint-adv --relpaths --mode all \
-#            meta/recipes-kernel/linux/linux-yocto_6.12.bb \
-#            --output reports/oelint-report.txt
-#        continue-on-error: true
-#        id: lint
-#
-#      - name: Upload lint report artifact
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: oelint-report
-#          path: reports/oelint-report.txt
-
-
-      - name: Clone kernel-hardening-checker
+      - name: Run OELint on one recipe
         run: |
-          git clone https://github.com/a13xp0p0v/kernel-hardening-checker.git
+          mkdir -p reports/linter
+          oelint-adv --relpaths --mode all \
+            meta/recipes-kernel/linux/linux-yocto_6.12.bb \
+            --output reports/linter/oelint-report.txt
+        continue-on-error: true
+        id: lint
+
 
       - name: Run kernel hardening checker
         run: |
+          git clone https://github.com/a13xp0p0v/kernel-hardening-checker.git
+          
           mkdir -p reports/kernel
           ./kernel-hardening-checker/bin/kernel-hardening-checker \
             -c meta-mylayer/recipes-kernel/linux-yocto/.config \
             -m json \
             > reports/kernel/hardening.json
-
-      - name: Upload kernel hardening report
-        uses: actions/upload-artifact@v4
-        with:
-          name: kernel-hardening-report
-          path: reports/kernel/hardening.json
-
 
       - name: Run cppcheck and generate HTML report
         run: |
@@ -108,6 +93,7 @@ jobs:
               <a href="cppcheck/html/index.html">Cppcheck Static Analysis</a>
               <a href="kernel/hardening.json">Kernel Hardening JSON</a>
               <a href="gitleaks/index.html">Gitleaks Report</a>
+              <a href="linter/oelint-report.txt">OElint Report</a>
             
               <p>Reports generated automatically via GitHub Actions.</p>
             </body>
@@ -120,11 +106,13 @@ jobs:
           mkdir -p reports/site/cppcheck
           mkdir -p reports/site/kernel
           mkdir -p reports/site/gitleaks
+          mkdir -p reports/site/linter
           
           cp -r reports/bandit/* reports/site/bandit/
           cp -r reports/cppcheck/html reports/site/cppcheck/
           cp -r reports/kernel/* reports/site/kernel/
           cp -r reports/gitleaks/* reports/site/gitleaks/
+          cp -r reports/linter/* reports/site/linter/
 
       # This packages the site content
       - name: Prepare GitHub Pages artifact
