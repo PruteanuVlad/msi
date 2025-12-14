@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Checksec Report</title>
+
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            background: #f6f6f6;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-top: 0;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            background: white;
+        }
+
+        th, td {
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+        }
+
+        th {
+            background: #eee;
+            position: sticky;
+            top: 0;
+        }
+
+        tr.good { background: #e8f5e9; }
+        tr.warn { background: #fff8e1; }
+        tr.bad  { background: #fdecea; }
+
+        .filter {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>Binary Hardening Report (checksec)</h1>
+
+<table id="table">
+    <thead></thead>
+    <tbody></tbody>
+</table>
+
+<script>
+    fetch("checksec.csv")
+        .then(r => r.text())
+        .then(csv => {
+            const lines = csv.trim().split("\n");
+            const headers = lines[0].split(",");
+
+            const thead = document.querySelector("#table thead");
+            thead.innerHTML = "<tr>" + headers.map(h => `<th>${h}</th>`).join("") + "</tr>";
+
+            const tbody = document.querySelector("#table tbody");
+
+            const rows = lines.slice(1).map(l => l.split(","));
+
+            function severity(row) {
+                const NX = row[headers.indexOf("NX")];
+                const CANARY = row[headers.indexOf("STACK_CANARY")];
+                const RELRO = row[headers.indexOf("RELRO")];
+
+                if (NX !== "NX enabled") return "bad";
+                if (CANARY !== "Canary found") return "warn";
+                if (RELRO !== "Full RELRO") return "warn";
+                return "good";
+            }
+
+            function render(onlyWeak = false) {
+                tbody.innerHTML = "";
+                rows.forEach(r => {
+                    const sev = severity(r);
+                    if (onlyWeak && sev === "good") return;
+
+                    const tr = document.createElement("tr");
+                    tr.className = sev;
+                    tr.innerHTML = r.map(c => `<td>${c}</td>`).join("");
+                    tbody.appendChild(tr);
+                });
+            }
+
+            render();
+
+            document.getElementById("onlyWeak").addEventListener("change", e => {
+                render(e.target.checked);
+            });
+        });
+</script>
+
+</body>
+</html>

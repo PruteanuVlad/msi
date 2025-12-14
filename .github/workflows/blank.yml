@@ -20,7 +20,7 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3 python3-pip cppcheck
+          sudo apt-get install -y python3 python3-pip cppcheck checksec
           pip3 install oelint-adv bandit
 
       - name: Run OELint on one recipe
@@ -79,6 +79,27 @@ jobs:
             mkdir -p reports/gitleaks
             ./gitleaks detect --report-path=reports/gitleaks/index.html --report-format=template --report-template=./basic.tmpl
 
+      - name: Build minimal image
+        if: always()
+        run: |
+          echo 0 | sudo tee /proc/sys/kernel/apparmor_restrict_unprivileged_userns
+          sudo apt update
+          sudo apt-get install build-essential chrpath cpio debianutils locales
+          sudo apt-get install diffstat file gawk gcc git iputils-ping libacl1
+          sudo apt-get install liblz4-tool python3 python3-git python3-jinja2
+          sudo apt-get install python3-pexpect python3-pip python3-subunit socat
+          sudo apt-get install texinfo unzip wget xz-utils zstd python3-websockets
+          
+          TEMPLATECONF=./meta-mylayer/conf/templates/test-1 source oe-init-build-env build
+          bitbake minimal-image
+
+      - name: Run Checksec and generate HTML report
+        if: always()
+        run: |
+          mkdir -p reports/Checksec
+          ls -a
+          checksec --dir="./build/tmp/deploy/images/qemux86-64/minimal-image-qemux86-64.rootfs/" --format=csv > reports/checksec/checksec.csv
+
       - name: Assemble site directory
         if: always()
         run: |
@@ -88,6 +109,7 @@ jobs:
           mkdir -p reports/site/gitleaks
           mkdir -p reports/site/linter
           mkdir -p reports/site/shellcheck/
+          mkdir -p reports/site/checksec/
           
           cp -r reports/bandit/* reports/site/bandit/
           cp -r reports/cppcheck/html reports/site/cppcheck/
@@ -95,6 +117,7 @@ jobs:
           cp -r reports/gitleaks/* reports/site/gitleaks/
           cp -r reports/linter/* reports/site/linter/
           cp -r reports/shellcheck/* reports/site/shellcheck/
+          cp -r reports/checksec/* reports/site/checksec/
 
       # This packages the site content
       - name: Prepare GitHub Pages artifact
@@ -107,19 +130,3 @@ jobs:
       - name: Deploy to GitHub Pages
         if: always()
         uses: actions/deploy-pages@v4
-
-#      - name: Build minimal image
-#        if: always()
-#        run: |
-#          echo 0 | sudo tee /proc/sys/kernel/apparmor_restrict_unprivileged_userns
-#          sudo apt update
-#          sudo apt-get install build-essential chrpath cpio debianutils locales
-#          sudo apt-get install diffstat file gawk gcc git iputils-ping libacl1
-#          sudo apt-get install liblz4-tool python3 python3-git python3-jinja2
-#          sudo apt-get install python3-pexpect python3-pip python3-subunit socat
-#          sudo apt-get install texinfo unzip wget xz-utils zstd python3-websockets
-
-
-#      - name: Fail job if oelint failed
-#        if: ${{ steps.lint.outcome == 'failure' }}
-#        run: exit 1

@@ -58,7 +58,7 @@
 <div class="pipeline">
     <div class="mermaid">
         graph LR
-        Checkout --> InstallTools --> OELint --> Shellcheck --> KernelHardening --> Cppcheck --> Bandit --> Gitleaks --> Build --> SBOM
+        Checkout --> InstallTools --> OELint --> Shellcheck --> KernelHardening --> Cppcheck --> Bandit --> Gitleaks --> Build --> Checksec --> SBOM
     </div>
 </div>
 
@@ -103,6 +103,13 @@
         <a href="bandit/index.html">
             <h3>Bandit</h3>
             <p>Python SAST</p>
+        </a>
+    </div>
+
+    <div class="card">
+        <a href="checksec/index.html">
+            <h3>Checksec</h3>
+            <p>Check binary hardening</p>
         </a>
     </div>
 
