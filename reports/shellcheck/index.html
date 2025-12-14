@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>ShellCheck Report</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ccc; padding: 6px; }
+        th { background: #eee; }
+
+        .sev-error { background: #f8d7da; }
+        .sev-warning { background: #fff3cd; }
+        .sev-info { background: #e2e3e5; }
+
+        select { margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<h1>ShellCheck Report</h1>
+
+<label>Severity:
+    <select id="sevFilter">
+        <option value="">All</option>
+        <option value="error">Error</option>
+        <option value="warning">Warning</option>
+        <option value="info">Info</option>
+    </select>
+</label>
+
+<table>
+    <thead>
+    <tr>
+        <th>File</th>
+        <th>Line</th>
+        <th>Code</th>
+        <th>Severity</th>
+        <th>Message</th>
+    </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+</table>
+
+<script>
+    fetch("shellcheck.json")
+        .then(r => r.json())
+        .then(data => {
+            const rows = document.getElementById("rows");
+            const filter = document.getElementById("sevFilter");
+
+            function render() {
+                rows.innerHTML = "";
+                data.forEach(i => {
+                    if (filter.value && i.level !== filter.value) return;
+
+                    const tr = document.createElement("tr");
+                    tr.className = "sev-" + i.level;
+                    tr.innerHTML = `
+        <td>${i.file}</td>
+        <td>${i.line}</td>
+        <td>${i.code}</td>
+        <td>${i.level}</td>
+        <td>${i.message}</td>
+      `;
+                    rows.appendChild(tr);
+                });
+            }
+
+            filter.onchange = render;
+            render();
+        });
+</script>
+
+</body>
+</html>

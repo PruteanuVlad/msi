@@ -58,7 +58,7 @@
 <div class="pipeline">
     <div class="mermaid">
         graph LR
-        Checkout --> InstallTools --> OELint --> KernelHardening --> Cppcheck --> Bandit --> Gitleaks --> Build --> SBOM
+        Checkout --> InstallTools --> OELint --> Shellcheck --> KernelHardening --> Cppcheck --> Bandit --> Gitleaks --> Build --> SBOM
     </div>
 </div>
 
@@ -75,6 +75,13 @@
         <a href="linter/index.html">
             <h3>OELint</h3>
             <p>Yocto Recipe Linting</p>
+        </a>
+    </div>
+
+    <div class="card">
+        <a href="shellcheck/index.html">
+            <h3>Shellcheck</h3>
+            <p>Shell script checker</p>
         </a>
     </div>
 

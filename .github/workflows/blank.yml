@@ -30,6 +30,14 @@ jobs:
             meta/recipes-kernel/linux/linux-yocto_6.12.bb \
             --output reports/linter/oelint-report.txt
 
+      - name: Run ShellCheck
+        if: always()
+        run: |
+          sudo apt-get install -y shellcheck
+          mkdir -p reports/shellcheck
+          shellcheck -f json \
+            $(find meta-mylayer -type f -name "*.sh") \
+            > reports/shellcheck/shellcheck.json
 
       - name: Run kernel hardening checker
         if: always()
@@ -79,12 +87,14 @@ jobs:
           mkdir -p reports/site/kernel
           mkdir -p reports/site/gitleaks
           mkdir -p reports/site/linter
+          mkdir -p reports/site/shellcheck/
           
           cp -r reports/bandit/* reports/site/bandit/
           cp -r reports/cppcheck/html reports/site/cppcheck/
           cp -r reports/kernel/* reports/site/kernel/
           cp -r reports/gitleaks/* reports/site/gitleaks/
           cp -r reports/linter/* reports/site/linter/
+          cp -r reports/shellcheck/* reports/site/shellcheck/
 
       # This packages the site content
       - name: Prepare GitHub Pages artifact
