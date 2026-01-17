@@ -98,7 +98,7 @@ jobs:
         run: |
           mkdir -p reports/Checksec
           mkdir -p /home/runner/work/msi/msi/build/tmp/deploy/images/qemux86-64/minimal-image-qemux86-64.rootfs
-          tar -xf /home/runner/work/msi/msi/build/tmp/deploy/images/qemux86-64/minimal-image-qemux86-64.rootfs/.tar.bz2 -C /home/runner/work/msi/msi/build/tmp/deploy/images/qemux86-64/minimal-image-qemux86-64.rootfs/
+          tar -xf /home/runner/work/msi/msi/build/tmp/deploy/images/qemux86-64/minimal-image-qemux86-64.rootfs.tar.bz2 -C /home/runner/work/msi/msi/build/tmp/deploy/images/qemux86-64/minimal-image-qemux86-64.rootfs
           checksec --dir="/home/runner/work/msi/msi/build/tmp/deploy/images/qemux86-64/minimal-image-qemux86-64.rootfs/" --format=csv > reports/checksec/checksec.csv
 
       - name: Assemble site directory

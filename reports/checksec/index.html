@@ -53,50 +53,58 @@
 </table>
 
 <script>
+    const headers = [
+        "RELRO",
+        "STACK CANARY",
+        "NX",
+        "PIE",
+        "RPATH",
+        "RUNPATH",
+        "Symbols",
+        "FORTIFY",
+        "Fortified",
+        "Fortifiable",
+        "FILE"
+    ];
+
     fetch("checksec.csv")
         .then(r => r.text())
-        .then(csv => {
-            const lines = csv.trim().split("\n");
-            const headers = lines[0].split(",");
+        .then(text => {
+            const lines = text.trim().split("\n");
+
+            // Parse CSV rows safely
+            const rows = lines.map(l =>
+                l.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.replace(/^"|"$/g,""))
+            );
 
             const thead = document.querySelector("#table thead");
-            thead.innerHTML = "<tr>" + headers.map(h => `<th>${h}</th>`).join("") + "</tr>";
+            thead.innerHTML =
+                "<tr>" + headers.map(h => `<th>${h}</th>`).join("") + "</tr>";
 
             const tbody = document.querySelector("#table tbody");
 
-            const rows = lines.slice(1).map(l => l.split(","));
-
             function severity(row) {
                 const NX = row[headers.indexOf("NX")];
-                const CANARY = row[headers.indexOf("STACK_CANARY")];
+                const CANARY = row[headers.indexOf("STACK CANARY")];
                 const RELRO = row[headers.indexOf("RELRO")];
 
-                if (NX !== "NX enabled") return "bad";
-                if (CANARY !== "Canary found") return "warn";
-                if (RELRO !== "Full RELRO") return "warn";
+                if (!NX || NX.includes("disabled")) return "bad";
+                if (!CANARY || CANARY.includes("No canary")) return "warn";
+                if (!RELRO || RELRO.includes("Partial")) return "warn";
                 return "good";
             }
 
-            function render(onlyWeak = false) {
-                tbody.innerHTML = "";
-                rows.forEach(r => {
-                    const sev = severity(r);
-                    if (onlyWeak && sev === "good") return;
-
-                    const tr = document.createElement("tr");
-                    tr.className = sev;
-                    tr.innerHTML = r.map(c => `<td>${c}</td>`).join("");
-                    tbody.appendChild(tr);
-                });
-            }
-
-            render();
-
-            document.getElementById("onlyWeak").addEventListener("change", e => {
-                render(e.target.checked);
+            tbody.innerHTML = "";
+            rows.forEach(r => {
+                const tr = document.createElement("tr");
+                tr.className = severity(r);
+                tr.innerHTML = r.map(c => `<td>${c}</td>`).join("");
+                tbody.appendChild(tr);
             });
         });
 </script>
+
+
 
 </body>
 </html>
