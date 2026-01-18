@@ -131,3 +131,12 @@ jobs:
       - name: Deploy to GitHub Pages
         if: always()
         uses: actions/deploy-pages@v4
+
+      - name: Upload Yocto Build Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: yocto-build-artifacts
+          path: |
+            /home/runner/work/msi/msi/build/tmp/deploy/images/qemux86-64/minimal-image-qemux86-64.rootfs.tar.bz2
+            /home/runner/work/msi/msi/build/tmp/deploy/images/qemux86-64/bzImage
+
